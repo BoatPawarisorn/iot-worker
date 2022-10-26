@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: farmworld-node-scheduler
+  labels:
+    app: farmworld-node-scheduler
+spec:
+  selector:
+    matchLabels:
+      app: farmworld-node-scheduler
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: farmworld-node-scheduler
+    spec:
+      containers:
+        - name: farmworld-node-scheduler
+          image: IMAGE:TAG
+          imagePullPolicy: Always
+          securityContext:
+            privileged: true
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: farmworld-node-scheduler-env
+          resources:
+            requests:
+              cpu: 128m
+              memory: 256M
+            limits:
+              cpu: 128m
+              memory: 256M
+      imagePullSecrets:
+        - name: gcr-json-key
+      volumes:
+        - name: data
+          emptyDir: {}

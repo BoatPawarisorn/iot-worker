@@ -1,0 +1,44 @@
+name: Base Image
+
+on:
+  push:
+    branches:
+       - develop
+    # branches-ignore:
+    #  - '**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: '0'
+
+      - name: GitHub Environment Variables Action
+        id: env-vars
+        uses: FranzDiebold/github-env-vars-action@v2
+
+      - name: Build Docker image
+        env:
+          IMAGE_TAG: base
+        run: docker build . --file Dockerfile.base --tag asia.gcr.io/${{ secrets.GCLOUD_PROJECT }}/$CI_REPOSITORY_NAME_SLUG:$IMAGE_TAG
+
+      # Setup gcloud CLI
+      - uses: google-github-actions/setup-gcloud@v0
+        with:
+          project_id: ${{ secrets.GCLOUD_PROJECT }}
+          service_account_key: ${{ secrets.GCLOUD_AUTH }}
+          export_default_credentials: true
+
+      - name: Configure Docker to use Google Cloud Platform
+        run: |
+          # Set up docker to authenticate
+          # via gcloud command-line tool.
+          gcloud auth configure-docker
+
+      - name: Push image to Google Cloud Container Registry
+        env:
+          IMAGE_TAG: base
+        run: |
+          docker push asia.gcr.io/${{ secrets.GCLOUD_PROJECT }}/$CI_REPOSITORY_NAME_SLUG:base

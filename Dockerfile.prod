@@ -1,0 +1,33 @@
+FROM asia.gcr.io/farmpress-production/farmworld-node-api:base as builder
+
+COPY . .
+
+COPY .env.production .env
+
+# Clean Weak security files
+RUN rm -r .env.*
+
+RUN yarn run build
+
+FROM node:16.18-alpine
+
+RUN apk add --no-cache tini tzdata supervisor curl
+
+WORKDIR /usr/src/app
+
+COPY --from=builder /usr/src/app .
+
+ENV TZ Asia/Bangkok
+
+RUN cp /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+# Configure supervisord
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+EXPOSE 8080
+
+# HEALTHCHECK --interval=5s --timeout=5s --retries=2 CMD curl -f http://localhost:8080 || exit 1
+
+ENTRYPOINT ["tini", "--"]
+
+CMD ["sh","-c","/usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf"]

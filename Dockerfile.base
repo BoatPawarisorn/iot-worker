@@ -1,0 +1,14 @@
+FROM node:16.18-alpine as builder
+
+WORKDIR /usr/src/app
+
+COPY ./package.json .
+
+RUN apk add tzdata
+
+RUN npm config set package-lock false &&\
+  npm install
+
+ENV TZ Asia/Bangkok
+
+RUN cp /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
