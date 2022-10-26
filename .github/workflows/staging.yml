@@ -1,0 +1,65 @@
+name: Staging
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: '0'
+
+      - name: GitHub Environment Variables Action
+        id: env-vars
+        uses: FranzDiebold/github-env-vars-action@v2
+
+      # Setup gcloud CLI
+      - uses: google-github-actions/setup-gcloud@v0
+        with:
+          project_id: ${{ secrets.GCLOUD_PROJECT }}
+          service_account_key: ${{ secrets.GCLOUD_AUTH }}
+          export_default_credentials: true
+
+      - name: Configure Docker to use Google Cloud Platform
+        run: |
+          # Set up docker to authenticate
+          # via gcloud command-line tool.
+          gcloud auth configure-docker
+
+      - name: Build, tag, and push image to Google
+        env:
+          IMAGE_TAG: beta
+        run: |
+          docker build -f Dockerfile.stg -t asia.gcr.io/${{ secrets.GCLOUD_PROJECT }}/$CI_REPOSITORY_NAME_SLUG:$IMAGE_TAG .
+          docker push asia.gcr.io/${{ secrets.GCLOUD_PROJECT }}/$CI_REPOSITORY_NAME_SLUG:$IMAGE_TAG
+          echo "::set-output name=image::asia.gcr.io/${{ secrets.GCLOUD_PROJECT }}/$CI_REPOSITORY_NAME_SLUG:$IMAGE_TAG"
+
+      - name: Save DigitalOcean kubeconfig
+        uses: digitalocean/action-doctl@master
+        env:
+          DIGITALOCEAN_ACCESS_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+        with:
+          args: kubernetes cluster kubeconfig show k8s-staging-app > $GITHUB_WORKSPACE/.kubeconfig
+
+      - name: Set up Kustomize
+        run: |
+          cd docker/staging
+          curl -o kustomize.tar.gz --location https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv4.5.7/kustomize_v4.5.7_linux_amd64.tar.gz
+          tar xf kustomize.tar.gz
+          chmod u+x ./kustomize
+
+      - name: Deploy
+        env:
+          IMAGE_TAG: beta
+        run: |
+          cd docker/staging
+          kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig patch serviceaccount default -p '{"imagePullSecrets": [{"name": "gcr-json-key"}]}'
+          ./kustomize edit set image IMAGE:TAG=asia.gcr.io/${{ secrets.GCLOUD_PROJECT }}/$CI_REPOSITORY_NAME_SLUG:$IMAGE_TAG
+          ./kustomize build . | kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig apply -f -
+          kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig rollout restart deployment/$CI_REPOSITORY_NAME_SLUG
+          kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig rollout status deployment/$CI_REPOSITORY_NAME_SLUG
+          kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig get services -o wide
