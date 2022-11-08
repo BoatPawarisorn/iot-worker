@@ -1,0 +1,106 @@
+name: Production
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: '0'
+
+      - name: GitHub Environment Variables Action
+        id: env-vars
+        uses: FranzDiebold/github-env-vars-action@v2
+
+      - name: Bump version and push tag
+        id: bump_version
+        uses: anothrNick/github-tag-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: true
+          DEFAULT_BUMP: patch
+          RELEASE_BRANCHES: master
+
+      # Setup gcloud CLI
+      - uses: google-github-actions/setup-gcloud@v0
+        with:
+          project_id: ${{ secrets.GCLOUD_PROJECT }}
+          service_account_key: ${{ secrets.GCLOUD_AUTH }}
+          export_default_credentials: true
+
+      - name: Configure Docker to use Google Cloud Platform
+        run: |
+          # Set up docker to authenticate
+          # via gcloud command-line tool.
+          gcloud auth configure-docker
+
+      - name: Build Docker image
+        run: docker build . --file Dockerfile.prod  --tag asia.gcr.io/${{ secrets.GCLOUD_PROJECT }}/$CI_REPOSITORY_NAME_SLUG:${{ steps.bump_version.outputs.new_tag }}
+
+      - name: Push image to Google Cloud Container Registry
+        run: |
+          docker push asia.gcr.io/${{ secrets.GCLOUD_PROJECT }}/$CI_REPOSITORY_NAME_SLUG:${{ steps.bump_version.outputs.new_tag }}
+
+      - name: Extract tag name
+        id: tag_template
+        uses: frabert/replace-string-action@v1.2
+        with:
+          pattern: (\.+)
+          string: ${{ steps.bump_version.outputs.new_tag }}
+          replace-with: '-'
+          flags: g
+
+      - name: Configure Docker to use Google Cloud Platform
+        run: |
+          gcloud config set project farmpress-production &&\
+          gcloud config set compute/zone asia-southeast1-b &&\
+          gcloud config set compute/region asia-southeast1 &&\
+          gcloud compute instance-templates create-with-container \
+          $CI_REPOSITORY_NAME_SLUG-${{ steps.tag_template.outputs.replaced }} \
+          --machine-type e2-small \
+          --image-family cos-stable \
+          --image-project cos-cloud \
+          --container-image asia.gcr.io/farmpress-production/$CI_REPOSITORY_NAME_SLUG:${{ steps.bump_version.outputs.new_tag }} \
+          --container-privileged \
+          --boot-disk-size 20 \
+          --boot-disk-type pd-balanced \
+          --tags 'http8080,http-server,https-server' \
+          --scopes 'default,sql-admin' \
+          --metadata startup-script='#! /bin/bash
+          docker image prune -fa &&\
+          docker run -d \
+          -p 127.0.0.1:3306:3306 \
+          gcr.io/cloudsql-docker/gce-proxy:latest /cloud_sql_proxy \
+          -instances=farmpress-production:asia-southeast1:farmworld=tcp:0.0.0.0:3306'
+
+      # - name: Configure Docker to use phpMyAdmin
+      #   run: |
+      #     gcloud config set project farmpress-production &&\
+      #     gcloud config set compute/zone asia-southeast1-b &&\
+      #     gcloud config set compute/region asia-southeast1 &&\
+      #     gcloud compute instance-templates create-with-container \
+      #     $CI_REPOSITORY_NAME_SLUG-phpmyadmin \
+      #     --machine-type e2-micro \
+      #     --image-family cos-stable \
+      #     --image-project cos-cloud \
+      #     --container-image phpmyadmin:5.2 \
+      #     --container-privileged \
+      #     --container-env=\
+      #     PMA_HOST=127.0.0.1,\
+      #     PMA_USER=farmworld,\
+      #     PMA_PASSWORD='j7fK6$e6*58Q4uQ9' \
+      #     --boot-disk-size 20 \
+      #     --boot-disk-type pd-standard \
+      #     --tags 'http8080,http-server,https-server' \
+      #     --scopes 'default,sql-admin' \
+      #     --metadata startup-script='#! /bin/bash
+      #     docker image prune -fa &&\
+      #     docker run -d \
+      #     -p 127.0.0.1:3306:3306 \
+      #     gcr.io/cloudsql-docker/gce-proxy:latest /cloud_sql_proxy \
+      #     -instances=farmpress-production:asia-southeast1:farmworld=tcp:0.0.0.0:3306'
