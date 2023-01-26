@@ -67,8 +67,19 @@ export class CronjobService {
           const lon = customer.lon
           const projectId = customer.projectId
           const customerId = customer.customerId
-          const forecasts = await this.httpService.get(`${tmd_url}?lat=${lat}&lon=${lon}&fields=${fields}&date=${isDate}&duration=${tmd_duration}`, options).toPromise();
-          if (forecasts.status == 200) {
+          const forecasts = await this.httpService.axiosRef.get(
+            `${tmd_url}?lat=${lat}&lon=${lon}&fields=${fields}&date=${isDate}&duration=${tmd_duration}`, 
+            options)
+          .then(res => {
+            if (res.status && res.data){
+              return { 'status': res.status, 'data': res.data };
+            }
+            return { 'status': 500 , 'data': [] };
+          })
+          .catch(error => {
+            return { 'status': 500 , 'data': [] };
+          });
+          if (forecasts.status == 200 && forecasts.data.WeatherForecasts[0].forecasts[0].data != undefined) {
             const dataCreate = this.weatherRepository.create({
               title: 'ข้อมูลจากกรมอุตุฯ',
               detail: 'ข้อมูลจากกรมอุตุฯ',
@@ -91,7 +102,8 @@ export class CronjobService {
             });
             await this.weatherRepository.insert(dataCreate);
           } else {
-            Logger.error('Conecting lost from TMD.', forecasts.statusText);
+            console.log('[Weather] Cronjob daily Error.');
+            Logger.error('Conecting lost from TMD.', forecasts.status);
           }
         }
         // console.log(moment().format('HH:mm:ss'));
