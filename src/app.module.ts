@@ -7,6 +7,8 @@ import { AppService } from './app.service';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { CustomerModule } from './customer/customer.module';
 import { CronjobModule } from './cronjob/cronjob.module';
+import { KafkaService } from './kafka.service';
+import { MqttService } from './mqtt.service';
 
 @Module({
   imports: [
@@ -30,6 +32,8 @@ import { CronjobModule } from './cronjob/cronjob.module';
   controllers: [AppController],
   providers: [
     AppService,
+    KafkaService,
+    MqttService
   ],
 })
 export class AppModule {}

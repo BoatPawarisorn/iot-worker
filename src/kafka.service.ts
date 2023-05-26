@@ -13,9 +13,9 @@ export class KafkaService {
         await producer.connect();
         await producer.send({
             topic,
+            // messages: [{ value: message }],
             messages: [{ value: JSON.stringify(message) }],
         });
         await producer.disconnect();
     }
-
 }
