@@ -10,7 +10,7 @@ import { Kafka } from 'kafkajs';
 import * as mqtt from 'mqtt';
 import { KafkaService } from './kafka.service'
 import { MqttService } from './mqtt.service'
-import * as moment from 'moment'
+import { currentDateTime } from 'src/utils/date';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -66,7 +66,7 @@ async function bootstrap() {
           console.log(data);
           // toDb(data);
         } else if (topic === "api-to-worker") {
-          mqttService.publishMessage("worker-to-mqtt", "") // required data struct 
+          mqttService.publishMessageToBoard(message)
         }
       }
     },
@@ -74,21 +74,37 @@ async function bootstrap() {
   // End Subscribe
 
   // Start Subscribe To The MQTT Topic Here
-  const client = mqtt.connect('mqtt://3.0.14.122:1883');
+  const client = mqtt.connect('mqtt://178.128.106.172:1883');
   client.subscribe(["ide-to-worker"]); // topic from mqtt
   client.on("message", (topic, message) => {
     console.log(`Received message on topic ${topic}: ${message}`);
+    const messageString = message.toString('utf8');
+    let serial = ""
+    const matchSerial = messageString.match(/serial=(.*?),/);
+    if (matchSerial && matchSerial.length > 1) {
+      serial = matchSerial[1];
+    } else {
+      console.log("No serial found.");
+    }
+    let action = ""
+    const matchAction = messageString.match(/action=(.*?),/);
+    if (matchAction && matchAction.length > 1) {
+      action = matchAction[1];
+    } else {
+      console.log("No action found.");
+    }
+
     try {
       // Start Create Queue To Kafka
       kafkaService.sendMessage("worker-to-kafka", {
         key: {
-          cid: 0, // don't have client should add client id in message
+          cid: serial,
         },
         value: {
-          topic: topic,
-          payload: message, // don't have packet.payload should add node payload in message
-          cid: 0, // don't have client should add client id in message
-          dt: moment().format("YYYY-MM-DD HH:mm:ss"),
+          topic: `/${serial}/${action}`,
+          payload: messageString,
+          cid: serial,
+          dt: currentDateTime(),
         }
       })
       // End Queue
@@ -101,4 +117,5 @@ async function bootstrap() {
   app.enableCors();
   await app.listen(process.env.PORT || 3000, '0.0.0.0');
 }
+
 bootstrap();
