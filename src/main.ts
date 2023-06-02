@@ -48,7 +48,7 @@ async function bootstrap() {
   // Start Subscribe To The Kafka Topic Here
   const kafka = new Kafka({
     clientId: 'my-app',
-    brokers: ['209.97.170.31:9092'],
+    brokers: [`${process.env.KAFKA_IP}:9092`],
   });
   const consumer = kafka.consumer({ groupId: 'ide-group' });
   await consumer.connect();
@@ -61,20 +61,20 @@ async function bootstrap() {
         value: message.value.toString(),
       });
       if (message.value.length > 0) {
-        if (topic === "worker-to-kafka") {
-          var data = JSON.parse(message.value.toString());
-          console.log(data);
-          // toDb(data);
-        } else if (topic === "api-to-worker") {
-          mqttService.publishMessageToBoard(message)
-        }
+        mqttService.publishMessageToBoard(message)
+        // if (topic === "worker-to-kafka") {
+        //   var data = JSON.parse(message.value.toString());
+        //   // mqttService.getScheduleEnd(data.fieldName, data.timeHour, data.timeMin)
+        // } else if (topic === "api-to-worker") {
+        //   mqttService.publishMessageToBoard(message)
+        // }
       }
     },
   });
   // End Subscribe
 
   // Start Subscribe To The MQTT Topic Here
-  const client = mqtt.connect('mqtt://178.128.106.172:1883');
+  const client = mqtt.connect(`mqtt://${process.env.MQTT_IP}:1883`);
   client.subscribe(["ide-to-worker"]); // topic from mqtt
   client.on("message", (topic, message) => {
     console.log(`Received message on topic ${topic}: ${message}`);

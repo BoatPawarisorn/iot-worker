@@ -1,9 +1,9 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
-import { BoardsAutoConfigEntity } from './entities/boards-auto-config.entity';
-import { BoardsScheduleEntity } from './entities/boards-schedule.entity';
-import { BoardsScheduleTimeEntity } from './entities/boards-schedule-time.entity';
+import { BoardsAutoConfig } from './entities/boards-auto-config.entity';
+import { BoardsSchedule } from './entities/boards-schedule.entity';
+import { BoardsScheduleTime } from './entities/boards-schedule-time.entity';
 import { PageDto } from "../common/dtos/page.dto";
 import { PageMetaDto } from "../common/dtos/page-meta.dto";
 import { currentDateTime } from 'src/utils/date';
@@ -11,15 +11,15 @@ import { currentDateTime } from 'src/utils/date';
 @Injectable()
 export class ConfigBoardsService {
     constructor(
-        @InjectRepository(BoardsAutoConfigEntity)
-        private readonly boardsAutoConfigRepository: Repository<BoardsAutoConfigEntity>,
-        @InjectRepository(BoardsScheduleEntity)
-        private readonly boardsScheduleRepository: Repository<BoardsScheduleEntity>,
-        @InjectRepository(BoardsScheduleTimeEntity)
-        private readonly boardsScheduleTimeRepository: Repository<BoardsScheduleTimeEntity>,
+        @InjectRepository(BoardsAutoConfig)
+        private readonly boardsAutoConfigRepository: Repository<BoardsAutoConfig>,
+        @InjectRepository(BoardsSchedule)
+        private readonly boardsScheduleRepository: Repository<BoardsSchedule>,
+        @InjectRepository(BoardsScheduleTime)
+        private readonly boardsScheduleTimeRepository: Repository<BoardsScheduleTime>,
     ) { }
 
-    async findAllBoardsAutoConfig(pageOptionsDto): Promise<PageDto<BoardsAutoConfigEntity>> {
+    async findAllBoardsAutoConfig(pageOptionsDto): Promise<PageDto<BoardsAutoConfig>> {
         const take = pageOptionsDto.take || 10;
         const skip = pageOptionsDto.skip || 0;
         const serial = pageOptionsDto.serial;
@@ -64,7 +64,7 @@ export class ConfigBoardsService {
 
         return new PageDto(result, pageMetaDto);
     }
-    async updateStatusBoardsAutoConfig(status: string, serial: string, deviceId: string, slot: any): Promise<BoardsAutoConfigEntity> {
+    async updateStatusBoardsAutoConfig(status: string, serial: string, deviceId: string, slot: any): Promise<BoardsAutoConfig> {
         const auto = await this.boardsAutoConfigRepository.findOne({
             where: {
                 serial: serial,
@@ -75,7 +75,7 @@ export class ConfigBoardsService {
         auto.status = status
         return await this.boardsAutoConfigRepository.save(auto);
     }
-    async updateBoardsAutoConfig(id: number, boardsAutoConfig: any): Promise<BoardsAutoConfigEntity> {
+    async updateBoardsAutoConfig(id: number, boardsAutoConfig: any): Promise<BoardsAutoConfig> {
         const auto = await this.boardsAutoConfigRepository.findOne(id);
         const deviceId = boardsAutoConfig?.device_id;
         const slot = boardsAutoConfig?.slot;
@@ -120,8 +120,8 @@ export class ConfigBoardsService {
         return await this.boardsAutoConfigRepository.save(auto);
     }
 
-    async createBoardsAutoConfig(boardsAutoConfig: any): Promise<BoardsAutoConfigEntity> {
-        const auto = new BoardsAutoConfigEntity();
+    async createBoardsAutoConfig(boardsAutoConfig: any): Promise<BoardsAutoConfig> {
+        const auto = new BoardsAutoConfig();
         const deviceId = boardsAutoConfig?.device_id
         const slot = boardsAutoConfig?.slot;
         const apSerial = boardsAutoConfig?.ap_serial;
@@ -167,7 +167,7 @@ export class ConfigBoardsService {
         return await this.boardsAutoConfigRepository.save(auto);
     }
 
-    async findAllBoardsSchedule(pageOptionsDto): Promise<PageDto<BoardsScheduleEntity>> {
+    async findAllBoardsSchedule(pageOptionsDto): Promise<PageDto<BoardsSchedule>> {
         const take = pageOptionsDto.take || 10;
         const skip = pageOptionsDto.skip || 0;
         const serial = pageOptionsDto.serial;
@@ -205,7 +205,7 @@ export class ConfigBoardsService {
         return new PageDto(result, pageMetaDto);
     }
 
-    async updateStatusBoardsSchedule(status: string, serial: string, deviceId: string, slot: any): Promise<BoardsScheduleEntity> {
+    async updateStatusBoardsSchedule(status: string, serial: string, deviceId: string, slot: any): Promise<BoardsSchedule> {
         const schedule = await this.boardsScheduleRepository.findOne({
             where: {
                 serial: serial,
@@ -217,7 +217,7 @@ export class ConfigBoardsService {
         return await this.boardsScheduleRepository.save(schedule);
     }
 
-    async updateBoardsSchedule(id: number, boardsSchedule: any): Promise<BoardsScheduleEntity> {
+    async updateBoardsSchedule(id: number, boardsSchedule: any): Promise<BoardsSchedule> {
         const schedule = await this.boardsScheduleRepository.findOne(id);
         const mon = boardsSchedule?.mon
         const tue = boardsSchedule?.tue
@@ -254,8 +254,8 @@ export class ConfigBoardsService {
         return await this.boardsScheduleRepository.save(schedule);
     }
 
-    async createBoardsSchedule(boardsSchedule: any): Promise<BoardsScheduleEntity> {
-        const schedule = new BoardsScheduleEntity();
+    async createBoardsSchedule(boardsSchedule: any): Promise<BoardsSchedule> {
+        const schedule = new BoardsSchedule();
         const deviceId = boardsSchedule?.device_id
         const slot = boardsSchedule?.slot;
         const serial = boardsSchedule?.serial;
@@ -316,8 +316,8 @@ export class ConfigBoardsService {
         return result.affected > 0
     }
 
-    async createBoardsScheduleTime(id: any, times: any): Promise<BoardsScheduleTimeEntity[]> {
-        let scheduleTime: BoardsScheduleTimeEntity[]
+    async createBoardsScheduleTime(id: any, times: any): Promise<BoardsScheduleTime[]> {
+        let scheduleTime: BoardsScheduleTime[]
         times.forEach((value: any, index: number) => {
             if (value['start'] != '' && value['end'] != '' && index < 5) {
                 let start = value['start'].split(':');

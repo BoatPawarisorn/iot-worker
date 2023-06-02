@@ -7,7 +7,7 @@ import {
 } from 'typeorm';
 
 @Entity({ name: 'boards_schedule' })
-export class BoardsScheduleEntity {
+export class BoardsSchedule {
     @PrimaryGeneratedColumn()
     id: number;
 

@@ -6,7 +6,7 @@ export class KafkaService {
     async sendMessage(topic: string, message: any) {
         const kafka = new Kafka({
             clientId: 'my-app',
-            brokers: ['209.97.170.31:9092'],
+            brokers: [`${process.env.KAFKA_IP}:9092`],
         });
 
         const producer = kafka.producer();

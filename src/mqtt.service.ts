@@ -2,25 +2,29 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import * as mqtt from 'mqtt';
 import { currentDateTime } from 'src/utils/date';
 import { ConfigBoardsService } from 'src/config-boards/config-boards.service'
-
+import { BoardsSchedule } from './config-boards/entities/boards-schedule.entity';
+import { getRepository, SelectQueryBuilder } from 'typeorm';
+import { BoardsScheduleTime } from './config-boards/entities/boards-schedule-time.entity';
+import { KafkaService } from './kafka.service';
 @Injectable()
 export class MqttService {
-    constructor(private readonly configBoardsService: ConfigBoardsService) { }
+    constructor(
+        private readonly configBoardsService: ConfigBoardsService,
+        private readonly kafkaService: KafkaService
+    ) { }
     async publishMessage(topic: string, message: string) {
-        const client = mqtt.connect('mqtt://178.128.106.172:1883');
+        const client = mqtt.connect(`mqtt://${process.env.MQTT_IP}:1883`);
         client.publish(topic, message);
     }
 
     async publishMessageToBoard(message: any) {
         if (message.value.length > 0) {
             try {
-                const server = mqtt.connect('mqtt://178.128.106.172:1883');
-                let data = JSON.parse(message.value);
+                const server = mqtt.connect(`mqtt://${process.env.MQTT_IP}:1883`);
+                let data = JSON.parse(message.value.toString());
                 switch (data.type) {
                     case ("schedule"):
-                        // save to db
-                        this.caseSchedule(message.value);
-                        // สั่งปิดให้ทำงานทันที
+                        this.caseSchedule(message.value.toString());
                         if (data.config.status == "off") { // {"serial":"2011AMW2GS3K189","deviceId":1,"slot":1,"deviceName":"Water pump","type":"schedule","dt":1585211850249,"config":{"day":{"fri":false,"mon":false,"sat":false,"sun":false,"thu":false,"tue":false,"wen":false},"time":[{"end":"07:32","start":"07:30","status":"on"},{"end":"15:36","start":"15:34","status":"on"},{"end":"","start":"","status":""},{"end":"","start":"","status":""},{"end":"","start":"","status":""}],"status":"off"}}
                             const jobData = {
                                 serial: data.serial,
@@ -37,12 +41,8 @@ export class MqttService {
                                 }
                             };
 
-                            let topic = `/${data.serial
-                                }/setup`
+                            let topic = `/${data.serial}/setup`
                             let payloadData = JSON.stringify(jobData);
-                            console.log("########### TYPE schedule off ##########");
-                            console.log("\n\n##############undefined == data.from####################");
-                            console.log("MQTT broker sending message to board ..\n");
 
                             server.publish(topic, payloadData, () => {
                                 console.log("MQTT broker message sent");
@@ -57,11 +57,8 @@ export class MqttService {
                         console.log("########### TYPE AUTO ##########");
                         // get data from api and insert to db.
                         if (undefined == data.from) {
-                            this.caseAuto(message.value);
-                            // console.log("########### Disable all another type ##########");
-                            this.caseDisableAutoAndSchedule(message.value);
-
-                            // สั่งปิดให้ทำงานทันที
+                            this.caseAuto(message.value.toString());
+                            this.caseDisableAutoAndSchedule(message.value.toString());
                             if (data.config.status == "off") { // data {"serial":"2011KDRBXSF1UGZ","deviceId":1,"slot":1,"deviceName":"Water pump","type":"auto","dt":1584935134794,"config":{"sensor_id":1,"start":"","finish":"","val":31,"status":"off"}}
                                 const jobData = {
                                     serial: data.serial,
@@ -78,13 +75,8 @@ export class MqttService {
                                     }
                                 };
 
-                                let topic = `/${data.serial
-                                    }/setup`
+                                let topic = `/${data.serial}/setup`
                                 let payloadData = JSON.stringify(jobData);
-
-                                console.log("########### TYPE AUTO ##########");
-                                console.log("\n\n##############undefined == data.from####################");
-                                console.log("MQTT broker sending message to board ..\n");
 
                                 server.publish(topic, payloadData, () => {
                                     console.log("MQTT broker message sent");
@@ -95,10 +87,7 @@ export class MqttService {
                             data.dt = currentDateTime();
                             message.value = JSON.stringify(data);
 
-                            let topic = `/${data.serial
-                                }/setup`
-                            console.log("\n\n#########################################");
-                            console.log("MQTT broker sending message to board ..\n");
+                            let topic = `/${data.serial}/setup`
 
                             server.publish(topic, message.value, function () {
                                 console.log("MQTT broker message sent");
@@ -108,20 +97,11 @@ export class MqttService {
                     default:
                         // when type custome from server awair check another type is off.
                         if (data.type != "update" && data.type == "custom" && undefined == data.from) {
-                            console.log("########### Type custom Dsiable all type ##########");
-                            this.caseDisableAutoAndSchedule(message.value);
+                            this.caseDisableAutoAndSchedule(message.value.toString());
                         }
-                        // mode datetime
                         data.dt = currentDateTime();
                         message.value = JSON.stringify(data);
-                        // mode datetime
-
-                        let topic = `/${data.serial
-                            }/setup`
-
-                        console.log("\n\n#########################################");
-                        console.log("MQTT broker sending message to board ..\n");
-
+                        let topic = `/${data.serial}/setup`
                         server.publish(topic, message.value, function () {
                             console.log("MQTT broker message sent");
                         });
@@ -246,4 +226,114 @@ export class MqttService {
             console.log("findAllBoardsSchedule [error]: ", error)
         }
     }
+
+    async getScheduleEnd(fieldName: string, timeHour: string, timeMin: string): Promise<any> {
+        console.log("getScheduleEnd", fieldName, timeHour, timeMin);
+        try {
+            const result = await this.createQueryBuilder()
+                .select([
+                    'boards_schedule.id',
+                    'boards_schedule.device_id',
+                    'boards_schedule.slot',
+                    'boards_schedule.serial',
+                    'boards_schedule_time.start_h',
+                    'boards_schedule_time.start_m',
+                    'boards_schedule_time.end_h',
+                    'boards_schedule_time.end_m',
+                ])
+                .from(BoardsSchedule, 'boards_schedule')
+                .innerJoin(BoardsScheduleTime, 'boards_schedule_time', 'boards_schedule.id = boards_schedule_time.boards_schedule_id')
+                .where('boards_schedule.' + fieldName + ' = :fieldValue', { fieldValue: 1 })
+                .andWhere('boards_schedule.status = :status', { status: 'on' })
+                .andWhere('boards_schedule_time.end_h = :timeHour', { timeHour })
+                .andWhere('boards_schedule_time.end_m = :timeMin', { timeMin })
+                .andWhere('boards_schedule_time.status = :status', { status: 'on' })
+                .limit(100)
+                .offset(0)
+                .getRawMany();
+
+            result.forEach(function (v: any, i: number) {
+                // topic worker to kafka
+                // createQueue(v, "off"); // Call the createQueue function with the appropriate arguments
+                this.kafkaService.sendMessage("worker-to-kafka", {
+                    key: {
+                        // cid: serial,
+                    },
+                    value: {
+                        // topic: `/${serial}/${action}`,
+                        // payload: messageString,
+                        // cid: serial,
+                        dt: currentDateTime(),
+                    }
+                })
+            });
+
+            return result;
+        } catch (error) {
+            console.log(error);
+            throw error;
+        }
+    }
+
+    async getScheduleStart(fieldName: string, timeHour: string, timeMin: string): Promise<any> {
+        console.log("getScheduleStart", fieldName, timeHour, timeMin);
+        try {
+            const result = await this.createQueryBuilder()
+                .select([
+                    'boards_schedule.id',
+                    'boards_schedule.device_id',
+                    'boards_schedule.slot',
+                    'boards_schedule.serial',
+                    'boards_schedule_time.start_h',
+                    'boards_schedule_time.start_m',
+                    'boards_schedule_time.end_h',
+                    'boards_schedule_time.end_m',
+                ])
+                .from(BoardsSchedule, 'boards_schedule')
+                .innerJoin(BoardsScheduleTime, 'boards_schedule_time', 'boards_schedule.id = boards_schedule_time.boards_schedule_id')
+                .where('boards_schedule.' + fieldName + ' = :fieldValue', { fieldValue: 1 })
+                .andWhere('boards_schedule.status = :status', { status: 'on' })
+                .andWhere('boards_schedule_time.start_h = :timeHour', { timeHour })
+                .andWhere('boards_schedule_time.start_m = :timeMin', { timeMin })
+                .andWhere('boards_schedule_time.status = :status', { status: 'on' })
+                .limit(100)
+                .offset(0)
+                .getRawMany();
+
+            result.forEach(function (v: any, i: number) {
+                console.log("value", v);
+                if (undefined != v.id) {
+                    // topic worker to kafka
+                    // createQueue(v, "on"); // Call the createQueue function with the appropriate arguments
+
+                    try {
+                        // Start Create Queue To Kafka
+                        this.kafkaService.sendMessage("worker-to-kafka", {
+                            key: {
+                                // cid: serial,
+                            },
+                            value: {
+                                // topic: `/${serial}/${action}`,
+                                // payload: messageString,
+                                // cid: serial,
+                                dt: currentDateTime(),
+                            }
+                        })
+                        // End Queue
+                    } catch (error) {
+                        console.log(error)
+                    }
+                }
+            });
+
+            return result;
+        } catch (error) {
+            console.log(error);
+            throw error;
+        }
+    }
+    createQueryBuilder(): SelectQueryBuilder<BoardsSchedule> {
+        return getRepository(BoardsSchedule).createQueryBuilder();
+    }
+
 }

@@ -6,7 +6,7 @@ import {
 } from 'typeorm';
 
 @Entity({ name: 'boards_auto_config' })
-export class BoardsAutoConfigEntity {
+export class BoardsAutoConfig {
     @PrimaryGeneratedColumn()
     id: number;
 

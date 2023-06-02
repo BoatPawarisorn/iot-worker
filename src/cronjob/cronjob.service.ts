@@ -3,12 +3,16 @@ import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Weather } from './entities/weather.entity';
 import { Cron } from '@nestjs/schedule';
-import { HttpService } from'@nestjs/axios';
+import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import * as moment from 'moment'
 import { CustomerService } from '../customer/customer.service';
 import { Temperature } from './entities/temperature.entity';
 import { ProvinceGeo } from './entities/province-geo.entity';
+import { currentDateTime } from 'src/utils/date';
+import { MqttService } from 'src/mqtt.service';
+import { ConfigBoardsService } from 'src/config-boards/config-boards.service';
+
 enum dataFrom {
   'admin' = 'admin',
   'tmd' = 'tmd',
@@ -28,9 +32,10 @@ export class CronjobService {
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
     private readonly customerService: CustomerService,
-    // private readonly uaaService: UaaService,
-  ) {}
-  
+    private readonly mqttService: MqttService,
+    private readonly configBoardsService: ConfigBoardsService,
+  ) { }
+
   // @Cron('*/20 * * * * *') // EVERY_DAY_IN_20SEC = '*/20 * * * * *' (for test)
   @Cron('0 03 * * *') // EVERY_DAY_AT_3AM = '0 03 * * *'
   async handleCronWeatherPerDay(): Promise<any> {
@@ -40,22 +45,22 @@ export class CronjobService {
     const tmd_duration = this.configService.get<string>('TMD_DURATION');
     const isDate = moment().format('YYYY-MM-DD');
     const options = {
-      headers: {"Authorization" : `Bearer ${tmd_token}`} 
+      headers: { "Authorization": `Bearer ${tmd_token}` }
     };
     const fields = 'rain,cond,ws10m,wd10m,tc_max,tc_min,psfc,slp,rh';
     const conditions = {
-      1 : 'ท้องฟ้าแจ่มใส (Clear)',
-      2 : 'มีเมฆบางส่วน (Partly cloudy)',
-      3 : 'เมฆเป็นส่วนมาก (Cloudy)',
-      4 : 'มีเมฆมาก (Overcast)',
-      5 : 'ฝนตกเล็กน้อย (Light rain)',
-      6 : 'ฝนปานกลาง (Moderate rain)',
-      7 : 'ฝนตกหนัก (Heavy rain)',
-      8 : 'ฝนฟ้าคะนอง (Thunderstorm)',
-      9 : 'อากาศหนาวจัด (Very cold)',
-      10 : 'อากาศหนาว (Cold)',
-      11 : 'อากาศเย็น (Cool)',
-      12 : 'อากาศร้อนจัด (Very hot)',
+      1: 'ท้องฟ้าแจ่มใส (Clear)',
+      2: 'มีเมฆบางส่วน (Partly cloudy)',
+      3: 'เมฆเป็นส่วนมาก (Cloudy)',
+      4: 'มีเมฆมาก (Overcast)',
+      5: 'ฝนตกเล็กน้อย (Light rain)',
+      6: 'ฝนปานกลาง (Moderate rain)',
+      7: 'ฝนตกหนัก (Heavy rain)',
+      8: 'ฝนฟ้าคะนอง (Thunderstorm)',
+      9: 'อากาศหนาวจัด (Very cold)',
+      10: 'อากาศหนาว (Cold)',
+      11: 'อากาศเย็น (Cool)',
+      12: 'อากาศร้อนจัด (Very hot)',
     };
 
     const customers = await this.customerService.findAll();
@@ -68,17 +73,17 @@ export class CronjobService {
           const projectId = customer.projectId
           const customerId = customer.customerId
           const forecasts = await this.httpService.axiosRef.get(
-            `${tmd_url}?lat=${lat}&lon=${lon}&fields=${fields}&date=${isDate}&duration=${tmd_duration}`, 
+            `${tmd_url}?lat=${lat}&lon=${lon}&fields=${fields}&date=${isDate}&duration=${tmd_duration}`,
             options)
-          .then(res => {
-            if (res.status && res.data){
-              return { 'status': res.status, 'data': res.data };
-            }
-            return { 'status': 500 , 'data': [] };
-          })
-          .catch(error => {
-            return { 'status': 500 , 'data': [] };
-          });
+            .then(res => {
+              if (res.status && res.data) {
+                return { 'status': res.status, 'data': res.data };
+              }
+              return { 'status': 500, 'data': [] };
+            })
+            .catch(error => {
+              return { 'status': 500, 'data': [] };
+            });
           if (forecasts.status == 200 && forecasts.data.WeatherForecasts[0].forecasts[0].data != undefined) {
             const dataCreate = this.weatherRepository.create({
               title: 'ข้อมูลจากกรมอุตุฯ',
@@ -123,7 +128,7 @@ export class CronjobService {
     const isDate = moment().format('YYYY-MM-DD');
     const isHour = moment().format('H');
     const options = {
-      headers: {"Authorization" : `Bearer ${tmd_token}`} 
+      headers: { "Authorization": `Bearer ${tmd_token}` }
     };
     const fields = 'tc';
     const geoGet = await this.provinceGeoRepository.find();
@@ -150,4 +155,50 @@ export class CronjobService {
     }
     console.log('[Temperature] Cronjob hourly End.');
   }
+
+  @Cron('1 * * * * *') // Cron schedule for running every second
+  async handleCron() {
+    const dateTime = currentDateTime();
+    const dayOfWeek = dateTime.getDay().toString();
+    console.log('dayOfWeek', dayOfWeek);
+    const timeCurrent = dateTime.getHours() + ':' + dateTime.getMinutes();
+    console.log('timeCurrent', timeCurrent);
+    const timeHour = dateTime.getHours().toString();
+    console.log('timeHour', timeHour);
+    const timeMin = dateTime.getMinutes().toString();
+    console.log('timeMin', timeMin);
+    const timeSec = dateTime.getSeconds().toString();
+    console.log('timeSec', timeSec);
+
+    if (1 !== +timeSec) {
+      return;
+    }
+
+    console.log('dayOfWeek', dayOfWeek);
+    let dNum = +dayOfWeek;
+    if (dNum === 0) {
+      dNum = 7;
+    }
+    const fieldName = `day${dNum}`;
+
+    await this.mqttService.getScheduleStart(fieldName, timeHour, timeMin);
+    await this.mqttService.getScheduleEnd(fieldName, timeHour, timeMin);
+  }
+
+  @Cron("* * * * *")
+  async handleBoardAutoConfig() {
+    try {
+      const result = await this.configBoardsService.findAllBoardsAutoConfig({
+        take: 1000,
+        status: "on"
+      })
+      if (result.data.length > 0) {
+        result.data.forEach(function (v, i) {
+          // caseCheckLastest(v);
+        });
+      }
+    } catch (error) {
+      console.log("findAllBoardsAutoConfig [error]: ", error)
+    }
+  };
 }
