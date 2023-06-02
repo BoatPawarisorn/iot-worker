@@ -253,19 +253,32 @@ export class MqttService {
                 .getRawMany();
 
             result.forEach(function (v: any, i: number) {
-                // topic worker to kafka
-                // createQueue(v, "off"); // Call the createQueue function with the appropriate arguments
-                this.kafkaService.sendMessage("worker-to-kafka", {
-                    key: {
-                        // cid: serial,
-                    },
-                    value: {
-                        // topic: `/${serial}/${action}`,
-                        // payload: messageString,
-                        // cid: serial,
-                        dt: currentDateTime(),
+                console.log("value", v);
+                if (undefined != v.id) {
+                    try {
+                        // Start Create Queue To Kafka
+                        this.kafkaService.sendMessage("worker-to-kafka", {
+                            serial: v.serial,
+                            slot: v.slot,
+                            deviceId: +v.device_id,
+                            deviceName: +v.device_id,
+                            type: "custom",
+                            from: "server",
+                            dts: currentDateTime(),
+                            dt: currentDateTime(),
+                            config: {
+                                status: "off",
+                                startHour: v.start_h,
+                                startMin: v.start_m,
+                                endHour: v.end_h,
+                                endMin: v.end_m,
+                            },
+                        })
+                        // End Queue
+                    } catch (error) {
+                        console.log(error)
                     }
-                })
+                }
             });
 
             return result;
@@ -303,21 +316,24 @@ export class MqttService {
             result.forEach(function (v: any, i: number) {
                 console.log("value", v);
                 if (undefined != v.id) {
-                    // topic worker to kafka
-                    // createQueue(v, "on"); // Call the createQueue function with the appropriate arguments
-
                     try {
                         // Start Create Queue To Kafka
                         this.kafkaService.sendMessage("worker-to-kafka", {
-                            key: {
-                                // cid: serial,
+                            serial: v.serial,
+                            slot: v.slot,
+                            deviceId: +v.device_id,
+                            deviceName: +v.device_id,
+                            type: "custom",
+                            from: "server",
+                            dts: currentDateTime(),
+                            dt: currentDateTime(),
+                            config: {
+                                status: "on",
+                                startHour: v.start_h,
+                                startMin: v.start_m,
+                                endHour: v.end_h,
+                                endMin: v.end_m,
                             },
-                            value: {
-                                // topic: `/${serial}/${action}`,
-                                // payload: messageString,
-                                // cid: serial,
-                                dt: currentDateTime(),
-                            }
                         })
                         // End Queue
                     } catch (error) {
