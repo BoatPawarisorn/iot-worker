@@ -10,12 +10,15 @@ import { Kafka } from 'kafkajs';
 import * as mqtt from 'mqtt';
 import { KafkaService } from './kafka.service'
 import { MqttService } from './mqtt.service'
+import { RedisService } from './redis.service';
 import { currentDateTime } from 'src/utils/date';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const kafkaService = app.get<KafkaService>(KafkaService);
   const mqttService = app.get<MqttService>(MqttService);
+  const redisService = app.get<RedisService>(RedisService);
+
   app.setGlobalPrefix('api');
   app.useGlobalPipes(
     new ValidationPipe({
@@ -61,6 +64,7 @@ async function bootstrap() {
         value: message.value.toString(),
       });
       if (message.value.length > 0) {
+        redisService.setRedis("worker-to-kafka", message)
         mqttService.publishMessageToBoard(message)
         // if (topic === "worker-to-kafka") {
         //   var data = JSON.parse(message.value.toString());

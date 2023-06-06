@@ -13,6 +13,7 @@ import { ConfigBoardsService } from './config-boards/config-boards.service';
 import { BoardsAutoConfig } from './config-boards/entities/boards-auto-config.entity';
 import { BoardsSchedule } from './config-boards/entities/boards-schedule.entity';
 import { BoardsScheduleTime } from './config-boards/entities/boards-schedule-time.entity';
+import { RedisService } from './redis.service';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -41,6 +42,7 @@ import { BoardsScheduleTime } from './config-boards/entities/boards-schedule-tim
     KafkaService,
     MqttService,
     ConfigBoardsService,
+    RedisService,
   ],
 })
 export class AppModule { }
