@@ -34,7 +34,8 @@ import { RedisService } from './redis.service';
     CronjobModule,
     TypeOrmModule.forFeature([
       BoardsAutoConfig, BoardsSchedule, BoardsScheduleTime
-    ])
+    ]),
+    ReportModule
   ],
   controllers: [AppController],
   providers: [
