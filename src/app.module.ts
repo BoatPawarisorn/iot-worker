@@ -14,6 +14,7 @@ import { BoardsAutoConfig } from './config-boards/entities/boards-auto-config.en
 import { BoardsSchedule } from './config-boards/entities/boards-schedule.entity';
 import { BoardsScheduleTime } from './config-boards/entities/boards-schedule-time.entity';
 import { RedisService } from './redis.service';
+import { DeviceConditionModule } from './device-conditions/jhi-device-conditions.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -34,7 +35,8 @@ import { RedisService } from './redis.service';
     CronjobModule,
     TypeOrmModule.forFeature([
       BoardsAutoConfig, BoardsSchedule, BoardsScheduleTime
-    ])
+    ]),
+    DeviceConditionModule,
   ],
   controllers: [AppController],
   providers: [

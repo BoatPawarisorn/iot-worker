@@ -12,6 +12,8 @@ import { ProvinceGeo } from './entities/province-geo.entity';
 import { currentDateTime } from 'src/utils/date';
 import { MqttService } from 'src/mqtt.service';
 import { ConfigBoardsService } from 'src/config-boards/config-boards.service';
+import { DeviceConditionService } from 'src/device-conditions/jhi-device-conditions.service';
+import { RedisService } from 'src/redis.service';
 
 enum dataFrom {
   'admin' = 'admin',
@@ -34,6 +36,8 @@ export class CronjobService {
     private readonly customerService: CustomerService,
     private readonly mqttService: MqttService,
     private readonly configBoardsService: ConfigBoardsService,
+    private readonly deviceConditionService: DeviceConditionService,
+    private readonly redisService: RedisService,
   ) { }
 
   // @Cron('*/20 * * * * *') // EVERY_DAY_IN_20SEC = '*/20 * * * * *' (for test)
@@ -192,9 +196,107 @@ export class CronjobService {
         take: 1000,
         status: "on"
       })
-      if (result.data.length > 0) {
-        result.data.forEach(function (v, i) {
-          // caseCheckLastest(v);
+      if (result?.data?.length > 0) {
+        result?.data?.forEach(async (boardsAutoConfig, i) => {
+          const conditions = await this.deviceConditionService.findAll({
+            device_id: boardsAutoConfig?.device_id,
+            sensor_id: boardsAutoConfig?.sensor_id
+          })
+          this.redisService.getAllRedis(boardsAutoConfig?.serial?.toString(), (err: Error | null, obj: {
+            [key: string]: string;
+          }) => {
+            if (conditions?.data?.length > 0) {
+              try {
+
+
+                conditions?.data?.forEach(async (condition, index) => {
+                  if (boardsAutoConfig.device_id == condition.device_id.toString()) {
+                    let checkIsSensorWireless = 0;
+                    if (null != obj) {
+                      for (const [sensorIndex, sensorData] of Object.entries(obj)) {
+                        let apSerial = sensorIndex;
+                        if (apSerial.length == 12) {
+                          checkIsSensorWireless = 1;
+                          boardsAutoConfig.ap_serial = apSerial;
+                          let sensorDataInner: { [key: string]: any } = JSON.parse(sensorData);
+                          for (const [sdIndex, sdData] of Object.entries(
+                            sensorDataInner
+                          )) {
+                            if (boardsAutoConfig.ap_serial == sdData?.sensor_serial && boardsAutoConfig.sensor_id == sdData?.items_id) {
+                              let val = boardsAutoConfig.val;
+                              let status = "off"
+                              console.log(`result_sensor ${condition.logics}, val ${sdData.result_sensor, val}`)
+                              switch (condition.logics) {
+                                case ("less"):
+                                  if (sdData?.result_sensor < val) {
+                                    status = "on"
+                                  }
+                                case ("more"):
+                                  if (sdData?.result_sensor > val) {
+                                    status = "on"
+                                  }
+                                case ("equal"):
+                                  if (sdData?.result_sensor == val) {
+                                    status = "on"
+                                  }
+                                case ("equal_less"):
+                                  if (sdData?.result_sensor <= val) {
+                                    status = "on"
+                                  }
+                                case ("equal_more"):
+                                  if (sdData?.result_sensor >= val) {
+                                    status = "on"
+                                  }
+                                default:
+                                  console.log("Nothing match any case.");
+                              }
+                              // createQueue(v, status);
+                            }
+                          }
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    if (null != obj && checkIsSensorWireless == 0 && obj.hasOwnProperty(boardsAutoConfig.sensor_id)) {
+                      let objCheck = JSON.parse(obj[boardsAutoConfig.sensor_id]);
+                      console.log("########### Normal BOARD #################");
+                      let val = boardsAutoConfig.val;
+                      let status = "off"
+                      console.log(`result_sensor ${condition.logics}, val ${objCheck.result_sensor, val}`)
+                      switch (condition.logics) {
+                        case ("less"):
+                          if (objCheck?.result_sensor < val) {
+                            status = "on"
+                          }
+                        case ("more"):
+                          if (objCheck?.result_sensor > val) {
+                            status = "on"
+                          }
+                        case ("equal"):
+                          if (objCheck?.result_sensor == val) {
+                            status = "on"
+                          }
+                        case ("equal_less"):
+                          if (objCheck?.result_sensor <= val) {
+                            status = "on"
+                          }
+                        case ("equal_more"):
+                          if (objCheck?.result_sensor >= val) {
+                            status = "on"
+                          }
+                        default:
+                          console.log("Nothing match any case.");
+                      }
+                      // createQueue(v, status);
+                    }
+                  }
+                })
+              } catch (error) {
+                console.log(error);
+              }
+            }
+          })
         });
       }
     } catch (error) {
