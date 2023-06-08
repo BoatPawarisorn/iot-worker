@@ -172,7 +172,7 @@ export class CronjobService {
   }
 
   @Cron('1 * * * * *') // Cron schedule for running every second
-  async handleCron() {
+  async handleSchedule() {
     const dateTime = currentDateTime();
     const dayOfWeek = dateTime.getDay().toString();
     console.log('dayOfWeek', dayOfWeek);
