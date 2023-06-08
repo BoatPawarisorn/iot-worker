@@ -12,6 +12,7 @@ import { ProvinceGeo } from './entities/province-geo.entity';
 import { currentDateTime } from 'src/utils/date';
 import { MqttService } from 'src/mqtt.service';
 import { ConfigBoardsService } from 'src/config-boards/config-boards.service';
+import { ReportService } from 'src/report/report.service';
 import { DeviceConditionService } from 'src/device-conditions/jhi-device-conditions.service';
 import { RedisService } from 'src/redis.service';
 import { BoardsAutoConfig } from 'src/config-boards/entities/boards-auto-config.entity';
@@ -39,6 +40,7 @@ export class CronjobService {
     private readonly customerService: CustomerService,
     private readonly mqttService: MqttService,
     private readonly configBoardsService: ConfigBoardsService,
+    private readonly reportService: ReportService,
     private readonly deviceConditionService: DeviceConditionService,
     private readonly redisService: RedisService,
     private readonly kafkaService: KafkaService,
@@ -124,6 +126,11 @@ export class CronjobService {
       }
     }
     console.log('[Weather] Cronjob daily End.');
+  }
+
+  @Cron("58 23 * * *")
+  async ReportSummaryDay() {
+    this.reportService.prepareBulkInsertSummaryDay();
   }
 
   // @Cron('0 */5 * * * *') // (for test)

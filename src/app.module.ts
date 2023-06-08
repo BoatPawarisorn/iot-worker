@@ -15,6 +15,7 @@ import { BoardsSchedule } from './config-boards/entities/boards-schedule.entity'
 import { BoardsScheduleTime } from './config-boards/entities/boards-schedule-time.entity';
 import { RedisService } from './redis.service';
 import { DeviceConditionModule } from './device-conditions/jhi-device-conditions.module';
+import { ReportModule } from './report/report.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -37,6 +38,7 @@ import { DeviceConditionModule } from './device-conditions/jhi-device-conditions
       BoardsAutoConfig, BoardsSchedule, BoardsScheduleTime
     ]),
     DeviceConditionModule,
+    ReportModule
   ],
   controllers: [AppController],
   providers: [
