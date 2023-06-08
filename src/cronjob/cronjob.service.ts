@@ -40,7 +40,7 @@ export class CronjobService {
     private readonly customerService: CustomerService,
     private readonly mqttService: MqttService,
     private readonly configBoardsService: ConfigBoardsService,
-    private readonly reportService:ReportService,
+    private readonly reportService: ReportService,
     private readonly deviceConditionService: DeviceConditionService,
     private readonly redisService: RedisService,
     private readonly kafkaService: KafkaService,
@@ -133,91 +133,73 @@ export class CronjobService {
     this.reportService.prepareBulkInsertSummaryDay();
   }
 
-  
-
   // @Cron('0 */5 * * * *') // (for test)
-  // @Cron('0 10 * * * *')
-  // async handleCronTemperaturePerHourly(): Promise<any> {
-  //   console.log('[Temperature] Cronjob hourly Start.');
-  //   const tmd_token = this.configService.get<string>('TMD_TOKER');
-  //   const tmd_url = this.configService.get<string>('TMD_URL') + '/hourly/at';
-  //   const tmd_duration = this.configService.get<string>('TMD_DURATION');
-  //   const isDate = moment().format('YYYY-MM-DD');
-  //   const isHour = moment().format('H');
-  //   const options = {
-  //     headers: { "Authorization": `Bearer ${tmd_token}` }
-  //   };
-  //   const fields = 'tc';
-  //   const geoGet = await this.provinceGeoRepository.find();
-  //   if (geoGet) {
-  //     console.log('[Temperature] Cronjob hourly processing.');
-  //     for (const geo of geoGet) {
-  //       if (geo.provinceLat && geo.provinceLon) {
-  //         const lat = geo.provinceLat
-  //         const lon = geo.provinceLon
-  //         const forecasts = await this.httpService.get(`${tmd_url}?lat=${lat}&lon=${lon}&fields=${fields}&date=${isDate}&hour=${isHour}&duration=${tmd_duration}`, options).toPromise();
-  //         if (forecasts.status == 200) {
-  //           const dataCreate = this.temperatureRepository.create({
-  //             provinceId: geo.provinceId,
-  //             temperature: forecasts.data.WeatherForecasts[0].forecasts[0].data.tc,
-  //           });
-  //           await this.temperatureRepository.insert(dataCreate);
-  //         } else {
-  //           Logger.error('Conecting lost from TMD.', forecasts.statusText);
-  //         }
-  //       }
-  //       // console.log(moment().format('HH:mm:ss'));
-  //       await sleep(1000);
-  //     }
-  //   }
-  //   console.log('[Temperature] Cronjob hourly End.');
-  // }
+  @Cron('0 10 * * * *')
+  async handleCronTemperaturePerHourly(): Promise<any> {
+    console.log('[Temperature] Cronjob hourly Start.');
+    const tmd_token = this.configService.get<string>('TMD_TOKER');
+    const tmd_url = this.configService.get<string>('TMD_URL') + '/hourly/at';
+    const tmd_duration = this.configService.get<string>('TMD_DURATION');
+    const isDate = moment().format('YYYY-MM-DD');
+    const isHour = moment().format('H');
+    const options = {
+      headers: { "Authorization": `Bearer ${tmd_token}` }
+    };
+    const fields = 'tc';
+    const geoGet = await this.provinceGeoRepository.find();
+    if (geoGet) {
+      console.log('[Temperature] Cronjob hourly processing.');
+      for (const geo of geoGet) {
+        if (geo.provinceLat && geo.provinceLon) {
+          const lat = geo.provinceLat
+          const lon = geo.provinceLon
+          const forecasts = await this.httpService.get(`${tmd_url}?lat=${lat}&lon=${lon}&fields=${fields}&date=${isDate}&hour=${isHour}&duration=${tmd_duration}`, options).toPromise();
+          if (forecasts.status == 200) {
+            const dataCreate = this.temperatureRepository.create({
+              provinceId: geo.provinceId,
+              temperature: forecasts.data.WeatherForecasts[0].forecasts[0].data.tc,
+            });
+            await this.temperatureRepository.insert(dataCreate);
+          } else {
+            Logger.error('Conecting lost from TMD.', forecasts.statusText);
+          }
+        }
+        // console.log(moment().format('HH:mm:ss'));
+        await sleep(1000);
+      }
+    }
+    console.log('[Temperature] Cronjob hourly End.');
+  }
 
-  // @Cron('1 * * * * *') // Cron schedule for running every second
-  // async handleCron() {
-  //   const dateTime = currentDateTime();
-  //   const dayOfWeek = dateTime.getDay().toString();
-  //   console.log('dayOfWeek', dayOfWeek);
-  //   const timeCurrent = dateTime.getHours() + ':' + dateTime.getMinutes();
-  //   console.log('timeCurrent', timeCurrent);
-  //   const timeHour = dateTime.getHours().toString();
-  //   console.log('timeHour', timeHour);
-  //   const timeMin = dateTime.getMinutes().toString();
-  //   console.log('timeMin', timeMin);
-  //   const timeSec = dateTime.getSeconds().toString();
-  //   console.log('timeSec', timeSec);
+  @Cron('1 * * * * *') // Cron schedule for running every second
+  async handleCron() {
+    const dateTime = currentDateTime();
+    const dayOfWeek = dateTime.getDay().toString();
+    console.log('dayOfWeek', dayOfWeek);
+    const timeCurrent = dateTime.getHours() + ':' + dateTime.getMinutes();
+    console.log('timeCurrent', timeCurrent);
+    const timeHour = dateTime.getHours().toString();
+    console.log('timeHour', timeHour);
+    const timeMin = dateTime.getMinutes().toString();
+    console.log('timeMin', timeMin);
+    const timeSec = dateTime.getSeconds().toString();
+    console.log('timeSec', timeSec);
 
-  //   if (1 !== +timeSec) {
-  //     return;
-  //   }
+    if (1 !== +timeSec) {
+      return;
+    }
 
-  //   console.log('dayOfWeek', dayOfWeek);
-  //   let dNum = +dayOfWeek;
-  //   if (dNum === 0) {
-  //     dNum = 7;
-  //   }
-  //   const fieldName = `day${dNum}`;
+    console.log('dayOfWeek', dayOfWeek);
+    let dNum = +dayOfWeek;
+    if (dNum === 0) {
+      dNum = 7;
+    }
+    const fieldName = `day${dNum}`;
 
-  //   await this.mqttService.getScheduleStart(fieldName, timeHour, timeMin);
-  //   await this.mqttService.getScheduleEnd(fieldName, timeHour, timeMin);
-  // }
+    await this.mqttService.getScheduleStart(fieldName, timeHour, timeMin);
+    await this.mqttService.getScheduleEnd(fieldName, timeHour, timeMin);
+  }
 
-  // @Cron("* * * * *")
-  // async handleBoardAutoConfig() {
-  //   try {
-  //     const result = await this.configBoardsService.findAllBoardsAutoConfig({
-  //       take: 1000,
-  //       status: "on"
-  //     })
-  //     if (result.data.length > 0) {
-  //       result.data.forEach(function (v, i) {
-  //         // caseCheckLastest(v);
-  //       });
-  //     }
-  //   } catch (error) {
-  //     console.log("findAllBoardsAutoConfig [error]: ", error)
-  //   }
-  // };
   @Cron("* * * * *")
   async handleBoardAutoConfig() {
     try {
