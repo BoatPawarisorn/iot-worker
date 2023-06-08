@@ -4,7 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { SensorsSummaryDay } from './entities/jhi-sensors-summary-day.entity';
 import { SensorsSummaryHour } from './entities/jhi-sensors-summary-hour.entity';
 import { SensorsSummaryMonth } from './entities/jhi-sensors-summary-month.entity';
-import { ReportYear } from './entities/report-year.entity';
+import { ReportYear } from './entities/jhi-sensors-summary-year.entity';
 import { HttpModule } from '@nestjs/axios';
 
 
