@@ -12,6 +12,11 @@ import { ProvinceGeo } from './entities/province-geo.entity';
 import { currentDateTime } from 'src/utils/date';
 import { MqttService } from 'src/mqtt.service';
 import { ConfigBoardsService } from 'src/config-boards/config-boards.service';
+import { DeviceConditionService } from 'src/device-conditions/jhi-device-conditions.service';
+import { RedisService } from 'src/redis.service';
+import { BoardsAutoConfig } from 'src/config-boards/entities/boards-auto-config.entity';
+import { DeviceCondition } from 'src/device-conditions/entities/jhi-device-conditions.entity';
+import { KafkaService } from 'src/kafka.service';
 
 enum dataFrom {
   'admin' = 'admin',
@@ -34,6 +39,9 @@ export class CronjobService {
     private readonly customerService: CustomerService,
     private readonly mqttService: MqttService,
     private readonly configBoardsService: ConfigBoardsService,
+    private readonly deviceConditionService: DeviceConditionService,
+    private readonly redisService: RedisService,
+    private readonly kafkaService: KafkaService,
   ) { }
 
   // @Cron('*/20 * * * * *') // EVERY_DAY_IN_20SEC = '*/20 * * * * *' (for test)
@@ -192,13 +200,107 @@ export class CronjobService {
         take: 1000,
         status: "on"
       })
-      if (result.data.length > 0) {
-        result.data.forEach(function (v, i) {
-          // caseCheckLastest(v);
+      if (result?.data?.length > 0) {
+        result?.data?.forEach(async (boardsAutoConfig, i) => {
+          const conditions = await this.deviceConditionService.findAll({
+            device_id: boardsAutoConfig?.device_id,
+            sensor_id: boardsAutoConfig?.sensor_id
+          })
+          this.redisService.getAllRedis(boardsAutoConfig?.serial?.toString(), (err: Error | null, obj: {
+            [key: string]: string;
+          }) => {
+            if (conditions?.data?.length > 0) {
+              try {
+
+
+                conditions?.data?.forEach(async (condition, index) => {
+                  if (boardsAutoConfig.device_id == condition.device_id.toString()) {
+                    let checkIsSensorWireless = 0;
+                    if (null != obj) {
+                      for (const [sensorIndex, sensorData] of Object.entries(obj)) {
+                        let apSerial = sensorIndex;
+                        if (apSerial.length == 12) {
+                          checkIsSensorWireless = 1;
+                          boardsAutoConfig.ap_serial = apSerial;
+                          let sensorDataInner: { [key: string]: any } = JSON.parse(sensorData);
+                          for (const [sdIndex, sdData] of Object.entries(
+                            sensorDataInner
+                          )) {
+                            if (boardsAutoConfig.ap_serial == sdData?.sensor_serial && boardsAutoConfig.sensor_id == sdData?.items_id) {
+                              await this.checkLogics(sdData, boardsAutoConfig, condition)
+                            }
+                          }
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    if (null != obj && checkIsSensorWireless == 0 && obj.hasOwnProperty(boardsAutoConfig.sensor_id)) {
+                      let objCheck = JSON.parse(obj[boardsAutoConfig.sensor_id]);
+                      console.log("########### Normal BOARD #################");
+                      await this.checkLogics(objCheck, boardsAutoConfig, condition)
+                    }
+                  }
+                })
+              } catch (error) {
+                console.log(error);
+              }
+            }
+          })
         });
       }
     } catch (error) {
       console.log("findAllBoardsAutoConfig [error]: ", error)
     }
   };
+
+  async checkLogics(data: any, boardsAutoConfig: BoardsAutoConfig, condition: DeviceCondition) {
+    let val = boardsAutoConfig.val;
+    let status = "off"
+    console.log(`result_sensor ${condition.logics}, val ${data.result_sensor, val}`)
+    switch (condition.logics) {
+      case ("less"):
+        if (data?.result_sensor < val) {
+          status = "on"
+        }
+      case ("more"):
+        if (data?.result_sensor > val) {
+          status = "on"
+        }
+      case ("equal"):
+        if (data?.result_sensor == val) {
+          status = "on"
+        }
+      case ("equal_less"):
+        if (data?.result_sensor <= val) {
+          status = "on"
+        }
+      case ("equal_more"):
+        if (data?.result_sensor >= val) {
+          status = "on"
+        }
+      default:
+        console.log("Nothing match any case.");
+    }
+
+    try {
+      // Start Create Queue To Kafka
+      this.kafkaService.sendMessage("worker-to-kafka", {
+        serial: data.serial,
+        slot: data.slot,
+        deviceId: +data.device_id,
+        deviceName: +data.device_id,
+        type: "auto",
+        from: "server",
+        dts: currentDateTime(),
+        dt: currentDateTime(),
+        config: {
+          status: status,
+        },
+      })
+      // End Queue
+    } catch (error) {
+      console.log(error)
+    }
+  }
 }
