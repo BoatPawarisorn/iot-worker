@@ -15,6 +15,7 @@ export const formatDate = (
   if (!/^\d+$/.test(dateNum.toString())) {
     throw new TypeError(`${dateNum}传递的数据格式化错误`)
   }
+
   if (isDue) {
     return moment(dateNum).format('YYYY-MM-DD')
   } else {

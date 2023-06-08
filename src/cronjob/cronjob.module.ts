@@ -14,9 +14,10 @@ import { KafkaService } from 'src/kafka.service';
 import { BoardsAutoConfig } from 'src/config-boards/entities/boards-auto-config.entity';
 import { BoardsSchedule } from 'src/config-boards/entities/boards-schedule.entity';
 import { BoardsScheduleTime } from 'src/config-boards/entities/boards-schedule-time.entity';
+import { ReportService } from 'src/report/report.service';
 @Module({
   imports: [TypeOrmModule.forFeature([Weather, Customer, Temperature, ProvinceGeo, BoardsAutoConfig, BoardsSchedule, BoardsScheduleTime]), HttpModule, CustomerModule],
   controllers: [],
-  providers: [CronjobService, CustomerService, MqttService, ConfigBoardsService, KafkaService],
+  providers: [CronjobService, CustomerService, MqttService, ConfigBoardsService, KafkaService,ReportService],
 })
 export class CronjobModule { }

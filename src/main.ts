@@ -12,12 +12,14 @@ import { KafkaService } from './kafka.service'
 import { MqttService } from './mqtt.service'
 import { RedisService } from './redis.service';
 import { currentDateTime } from 'src/utils/date';
+import { ReportService } from './report/report.service';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const kafkaService = app.get<KafkaService>(KafkaService);
   const mqttService = app.get<MqttService>(MqttService);
   const redisService = app.get<RedisService>(RedisService);
+  const reportService = app.get<ReportService>(ReportService);
 
   app.setGlobalPrefix('api');
   app.useGlobalPipes(
@@ -117,6 +119,11 @@ async function bootstrap() {
     }
   });
   // End Subscribe
+
+
+  // TEST
+  reportService.prepareBulkInsertSummaryDay();
+
 
   app.enableCors();
   await app.listen(process.env.PORT || 3000, '0.0.0.0');

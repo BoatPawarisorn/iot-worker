@@ -1,62 +1,53 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { IsNotEmpty, IsString, IsNumber, IsDate } from "class-validator";
-@Entity('jhi_sensors_summary_year')
-export class ReportYear {
+@Entity('jhi_sensors_summary_month')
+export class SensorsSummaryMonth {
     @PrimaryGeneratedColumn()
     id: number;
 
     @Column({
         type: "varchar",
         length: 100,
+        default:'string',
+        nullable: true,
     })
-    @IsNotEmpty()
-    @IsString()
     serial: string;
 
     @Column({
         type: "varchar",
         length: 20,
+        nullable: true,
     })
-    @IsString()
     sensor_serial: string;
 
     @Column()
-    @IsNotEmpty()
-    @IsNumber()
     sensor_id: number;
 
     @Column()
-    @IsNotEmpty()
-    @IsNumber()
     year: number;
 
     @Column()
-    @IsNotEmpty()
-    @IsDate()
+    month: number;
+
+    @Column()
     event_time: Date;
 
     @Column({
         type: "varchar",
-        length: 20,
+        length: 200,
     })
-    @IsNotEmpty()
-    @IsString()
     avg: string;
 
     @Column({
         type: "varchar",
-        length: 20,
+        length: 200,
     })
-    @IsNotEmpty()
-    @IsString()
     high: string;
 
     @Column({
         type: "varchar",
-        length: 20,
+        length: 200,
     })
-    @IsNotEmpty()
-    @IsString()
     low: string;
 
     @CreateDateColumn({
@@ -72,6 +63,5 @@ export class ReportYear {
         name: 'updated_at'
     })
     updated_at: Date;
-
 
 }

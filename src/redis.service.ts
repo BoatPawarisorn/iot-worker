@@ -12,6 +12,7 @@ export class RedisService {
         });
     }
     async setRedis(key: string, value: any) {
+        console.log(key,value);
         // const redis = new Redis({
         //     host: process.env.REDIS_HOST,
         //     port: 6379,

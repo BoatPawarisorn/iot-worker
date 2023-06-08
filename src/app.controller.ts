@@ -17,4 +17,6 @@ export class AppController {
   getProtectedResource(@Res() res: Response) {
     return res.status(HttpStatus.OK).json(this.appService.getSecureResource());
   }
+
+  
 }
