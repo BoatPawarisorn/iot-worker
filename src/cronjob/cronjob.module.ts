@@ -14,9 +14,13 @@ import { KafkaService } from 'src/kafka.service';
 import { BoardsAutoConfig } from 'src/config-boards/entities/boards-auto-config.entity';
 import { BoardsSchedule } from 'src/config-boards/entities/boards-schedule.entity';
 import { BoardsScheduleTime } from 'src/config-boards/entities/boards-schedule-time.entity';
+import { DeviceConditionService } from 'src/device-conditions/jhi-device-conditions.service';
+import { DeviceConditionModule } from 'src/device-conditions/jhi-device-conditions.module';
+import { RedisService } from 'src/redis.service';
+import { DeviceCondition } from 'src/device-conditions/entities/jhi-device-conditions.entity';
 @Module({
-  imports: [TypeOrmModule.forFeature([Weather, Customer, Temperature, ProvinceGeo, BoardsAutoConfig, BoardsSchedule, BoardsScheduleTime]), HttpModule, CustomerModule],
+  imports: [TypeOrmModule.forFeature([Weather, Customer, Temperature, ProvinceGeo, BoardsAutoConfig, BoardsSchedule, BoardsScheduleTime, DeviceCondition]), HttpModule, CustomerModule, DeviceConditionModule],
   controllers: [],
-  providers: [CronjobService, CustomerService, MqttService, ConfigBoardsService, KafkaService],
+  providers: [CronjobService, CustomerService, MqttService, ConfigBoardsService, KafkaService, DeviceConditionService, RedisService],
 })
 export class CronjobModule { }
