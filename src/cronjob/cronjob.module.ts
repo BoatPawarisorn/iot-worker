@@ -22,6 +22,6 @@ import { ReportService } from 'src/report/report.service';
 @Module({
   imports: [TypeOrmModule.forFeature([Weather, Customer, Temperature, ProvinceGeo, BoardsAutoConfig, BoardsSchedule, BoardsScheduleTime, DeviceCondition]), HttpModule, CustomerModule, DeviceConditionModule],
   controllers: [],
-  providers: [CronjobService, CustomerService, MqttService, ConfigBoardsService, KafkaService, DeviceConditionService, RedisService],
+  providers: [CronjobService, CustomerService, MqttService, ConfigBoardsService, KafkaService, DeviceConditionService, RedisService, ReportService],
 })
 export class CronjobModule { }

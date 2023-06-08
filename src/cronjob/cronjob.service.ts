@@ -40,7 +40,7 @@ export class CronjobService {
     private readonly customerService: CustomerService,
     private readonly mqttService: MqttService,
     private readonly configBoardsService: ConfigBoardsService,
-    private readonly reportService:ReportService
+    private readonly reportService:ReportService,
     private readonly deviceConditionService: DeviceConditionService,
     private readonly redisService: RedisService,
     private readonly kafkaService: KafkaService,
