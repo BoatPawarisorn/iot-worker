@@ -31,4 +31,8 @@ export class RedisService {
         // redis.get(key)
         this.redisClient.get(key)
     }
+
+    async getAllRedis(key: string, func: any) {
+        this.redisClient.hgetall(key, func)
+    }
 }
