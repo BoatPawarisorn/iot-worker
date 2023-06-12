@@ -17,7 +17,7 @@ export class ReportService {
 
     constructor(private readonly connection: Connection) { }
 
-    async prepareBulkInsertSummaryReport(summary_type) {
+    async prepareBulkInsertSummaryReport(summary_type:string) {
 
         console.log('summary_type' ,summary_type);
         const dateTime = currentDateTime();
@@ -80,7 +80,11 @@ export class ReportService {
 
                 const sensorResult = await this.connection
                     .createQueryBuilder()
-                    .select(summary_type == "hour"? "serial, sensor_serial, sensor_id, sensor_val, sensor_time":summary_type == "daily"?"serial, sensor_serial, sensor_id, year, month, day":summary_type=='week'?"serial, sensor_serial, sensor_id, year, month, day": summary_type == "month"? "serial, sensor_serial, sensor_id, year, month, day": "serial, sensor_serial, sensor_id, year, month")  //"serial, sensor_serial, sensor_id, year, month, day"
+                    .select(
+                        summary_type == "hour"? "serial, sensor_serial, sensor_id, sensor_val, sensor_time":
+                        summary_type == "daily"?"serial, sensor_serial, sensor_id, year, month, day":
+                        summary_type=='week'?"serial, sensor_serial, sensor_id, year, month, day": 
+                        summary_type == "month"? "serial, sensor_serial, sensor_id, year, month, day": "serial, sensor_serial, sensor_id, year, month") 
                     .addSelect(summary_type=='hour'?'ROUND(AVG(sensor_val), 2)':"ROUND(AVG(avg), 2)", "avgSensor")
                     .addSelect(summary_type=='hour'?"MAX(sensor_val)":"MAX(high)", "maxSensor")
                     .addSelect(summary_type=='hour'?"MIN(sensor_val)":"MIN(low)", "minSensor")
@@ -169,7 +173,7 @@ export class ReportService {
                            }
 
                         }
-                         else if(summary_type == 'month'){
+                        else if(summary_type == 'month'){
                             const  sensorsSummaryMonth = new SensorsSummaryMonth;
                             sensorsSummaryMonth.serial = data.serial ;
                             sensorsSummaryMonth.sensor_serial = data.sensor_serial;
@@ -183,7 +187,7 @@ export class ReportService {
                             sensorsSummaryMonth.created_at = currentDateTime();
                             sensorsSummaryMonth.updated_at = currentDateTime();
                             return sensorsSummaryMonth;
-                           }
+                        }
                         
                         else if(summary_type=='year'){
                             const sensorSummaryYear = new SensorsSummaryMonth ;
@@ -201,6 +205,9 @@ export class ReportService {
                             sensorSummaryYear.updated_at = currentDateTime();
                             return sensorSummaryYear;
                         }
+                        else { 
+                            console.log('error')
+                        }
                     });
 
                     if (bulkInsertSensorData.length > 0) {
@@ -215,12 +222,16 @@ export class ReportService {
         }
     }
 
-    async insertSummaryData(bulkInsertSensorData,summary_type) {
+    async insertSummaryData(bulkInsertSensorData:object,summary_type:string) {
         try {
 
             console.log(bulkInsertSensorData);
             await getConnection()
-                .getRepository(summary_type=='hour'?SensorsSummaryHour :summary_type == 'daily'?SensorsSummaryDay:summary_type=='week'? SensorsSummaryWeek:summary_type=='month'? SensorsSummaryMonth: SensorsSummaryYear)
+                .getRepository(
+                    summary_type=='hour'?SensorsSummaryHour :
+                    summary_type == 'daily'?SensorsSummaryDay:
+                    summary_type=='week'? SensorsSummaryWeek:
+                    summary_type=='month'? SensorsSummaryMonth: SensorsSummaryYear)
                 .save(bulkInsertSensorData);
             if(summary_type == 'daily'){
                 this.removeOldDataEveryDay();
