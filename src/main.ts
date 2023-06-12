@@ -122,7 +122,7 @@ async function bootstrap() {
 
 
   // TEST
-  reportService.prepareBulkInsertSummaryDay();
+  reportService.prepareBulkInsertSummaryReport('year');
 
 
   app.enableCors();

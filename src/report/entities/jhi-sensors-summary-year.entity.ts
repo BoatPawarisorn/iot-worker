@@ -1,7 +1,7 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { IsNotEmpty, IsString, IsNumber, IsDate } from "class-validator";
 @Entity('jhi_sensors_summary_year')
-export class ReportYear {
+export class SensorsSummaryYear {
     @PrimaryGeneratedColumn()
     id: number;
 
