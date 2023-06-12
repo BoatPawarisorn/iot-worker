@@ -28,8 +28,7 @@ export class SensorsSummaryDay {
   @IsNumber()
   month: number;
 
-  @Column()
-  @IsNotEmpty()
+  @Column({default:0})
   @IsNumber()
   day: number;
 

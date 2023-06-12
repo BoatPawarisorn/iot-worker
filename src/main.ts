@@ -120,11 +120,6 @@ async function bootstrap() {
   });
   // End Subscribe
 
-
-  // TEST
-  reportService.prepareBulkInsertSummaryDay();
-
-
   app.enableCors();
   await app.listen(process.env.PORT || 3000, '0.0.0.0');
 }
