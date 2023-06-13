@@ -168,12 +168,11 @@ export class CronjobService {
   }
 
   // Report Summary year
-  // @Cron('50 23 31 12 *')
-
-  @Cron(CronExpression.EVERY_YEAR)
+  // @Cron(CronExpression.EVERY_YEAR)
+  @Cron('50 23 31 DEC *')
   async ReportSummaryYear() {
-    console.log("test cronjob fail");
-    // this.reportService.prepareBulkInsertSummaryReport('year');
+    console.log('report year');
+    this.reportService.prepareBulkInsertSummaryReport('year');
   }
 
   // @Cron('0 */5 * * * *') // (for test)
@@ -238,7 +237,7 @@ export class CronjobService {
       return;
     }
 
-    console.log("dayOfWeek", dayOfWeek);
+    // console.log("dayOfWeek", dayOfWeek);
     let dNum = +dayOfWeek;
     if (dNum === 0) {
       dNum = 7;

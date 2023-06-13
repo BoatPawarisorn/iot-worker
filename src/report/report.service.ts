@@ -28,12 +28,12 @@ export class ReportService {
 
         const timestamp = new Date(dateTime).getTime();
         const format_time =  new Date(formatDate(timestamp,true)) ;
-        console.log('format_time : ',format_time);
+        // console.log('format_time : ',format_time);
 
 
-        console.log('hour :',hour);
-        console.log('day :',day);
-        console.log('month :',month);
+        // console.log('hour :',hour);
+        // console.log('day :',day);
+        // console.log('month :',month);
 
         //Summary Hour
         let start_time = currentDateTime();
@@ -48,16 +48,16 @@ export class ReportService {
         const endTime = end_time.toISOString().replace("T", " ").replace(".000Z", "");
 
         
-        console.log("start time : ", startTime);
-        console.log("end time : ", endTime);
+        // console.log("start time : ", startTime);
+        // console.log("end time : ", endTime);
 
 
         // Summary Week
         const day_start =  formatDate(dateTime.setDate(dateTime.getDate() - 6), true); ;
         const day_end =  dateTime.getDay() ;
 
-        console.log('day_start : ',day_start);
-        console.log('day_end : ',day_start);
+        // console.log('day_start : ',day_start);
+        // console.log('day_end : ',day_start);
 
         try {
             const sensors = await this.connection
@@ -225,7 +225,7 @@ export class ReportService {
     async insertSummaryData(bulkInsertSensorData:object,summary_type:string) {
         try {
 
-            console.log(bulkInsertSensorData);
+            console.log('Insert function work!! '+summary_type);
             await getConnection()
                 .getRepository(
                     summary_type=='hour'?SensorsSummaryHour :
@@ -236,7 +236,7 @@ export class ReportService {
             if(summary_type == 'daily'){
                 this.removeOldDataEveryDay();
             }
-            console.log("Insert Done.");
+            console.log("Insert Data to Database successfully !!");
         } catch (error) {
             console.log(error);
         }
